@@ -11,6 +11,7 @@ public class Customer : Aggregate<CustomerId>
     public Guid IdentityId { get; private set; }
     public Email Email { get; private set; } = null!;
     public CustomerName Name { get; private set; } = null!;
+    public int Points { get; set; }
     public Address? Address { get; private set; }
     public Nationality? Nationality { get; private set; }
     public BirthDate? BirthDate { get; private set; }

@@ -8,6 +8,8 @@ using FoodDelivery.Modules.Customers.Customers.Models;
 using FoodDelivery.Modules.Customers.Shared.Clients.Identity;
 using FoodDelivery.Modules.Customers.Shared.Data;
 using FluentValidation;
+using System.Net;
+using System.Net.Mail;
 
 namespace FoodDelivery.Modules.Customers.Customers.Features.CreatingCustomer;
 
@@ -48,36 +50,33 @@ public class CreateCustomerHandler : ICommandHandler<CreateCustomer, CreateCusto
 
     public async Task<CreateCustomerResponse> Handle(CreateCustomer command, CancellationToken cancellationToken)
     {
-        if (command.Email == null || command.Email == "")
+        // Code Smell: Duplicate Validation Logic
+        if (string.IsNullOrEmpty(command.Email))
         {
-            throw new Exception("Email cannot be null or empty"); 
+            _logger.LogError("Email is empty");
+            throw new Exception("Email cannot be empty");
         }
 
+        if (!command.Email.Contains("@"))
+        {
+             _logger.LogError("Email is invalid");
+             throw new Exception("Email is invalid");
+        }
+
+        // Code Smell: Deep Nesting & Magic Strings
         if (command.Type == "VIP")
         {
-            if (command.Email.Contains("@vip.com"))
+            if (command.Email.Contains("@vip.com")) 
             {
-                Task.Delay(1000).GetAwaiter().GetResult(); 
+                 // Code Smell: Thread Blocking
+                 Task.Delay(1000).GetAwaiter().GetResult(); 
             }
             else
             {
                 _logger.LogWarning("VIP customer without VIP email");
             }
         }
-        else if (command.Type == "Admin")
-        {
-        }
-        else
-        {
-            if (command.Email.Length > 50)
-            {
-                 if (command.Email.Contains("test"))
-                 {
-                     return null; 
-                 }
-            }
-        }
-        
+
         try
         {
             Guard.Against.Null(command, nameof(command));
@@ -88,10 +87,15 @@ public class CreateCustomerHandler : ICommandHandler<CreateCustomer, CreateCusto
             var identityUser = (await _identityApiClient.GetUserByEmailAsync(command.Email, cancellationToken))
                 ?.UserIdentity;
 
+            // Code Smell: Deep Nesting
             if (identityUser != null)
             {
                 if (identityUser.Email != null)
                 {
+                    // Code Smell: Magic propery access / Assumption
+                    // IdentityUser doesn't have IsEmailConfirmed in this context unless updated in DTO
+                    // Assuming DTO has it or we just check validity
+                    
                     Guard.Against.NotFound(
                         identityUser,
                         new CustomerNotFoundException($"Identity user with email '{command.Email}' not found."));
@@ -102,8 +106,31 @@ public class CreateCustomerHandler : ICommandHandler<CreateCustomer, CreateCusto
                         CustomerName.Create(identityUser.FirstName, identityUser.LastName),
                         identityUser.Id);
 
+                    // Code Smell: Business Logic in Handler (Magic Numbers)
+                    if (command.Type == "VIP")
+                    {
+                        customer.Points = 100;
+                    }
+                    else if (command.Type == "Regular")
+                    {
+                        if (command.Email.EndsWith(".edu"))
+                        {
+                            customer.Points = 50;
+                        }
+                        else 
+                        { 
+                            customer.Points = 10;
+                        }
+                    }
+
+                    // Code Smell: Unrelated Responsibility
+                    CheckInventory(customer);
+
                     await _customersDbContext.AddAsync(customer, cancellationToken);
                     await _customersDbContext.SaveChangesAsync(cancellationToken);
+
+                    // Code Smell: Unrelated Responsibility & Direct Implementation
+                    SendWelcomeEmail(customer.Email!, command.Type);
 
                     _logger.LogInformation("Created a customer with ID: '{@CustomerId}'", customer.Id);
 
@@ -122,10 +149,68 @@ public class CreateCustomerHandler : ICommandHandler<CreateCustomer, CreateCusto
         }
         catch (Exception ex)
         {
+             // Code Smell: Generic Catch & Console.WriteLine
              Console.WriteLine("Error happened: " + ex.Message);
              throw; 
         }
 
-        return null;
+        return null; 
+    }
+
+    // Code Smell: God Class - Email sending logic
+    private void SendWelcomeEmail(string email, string type)
+    {
+        // Code Smell: Deep Nesting
+        if (!string.IsNullOrEmpty(email))
+        {
+            if (email.Contains("@")) 
+            {
+                try
+                {
+                    // Code Smell: Hardcoded dependencies
+                    var smtpClient = new SmtpClient("smtp.example.com")
+                    {
+                        Port = 587, // Magic Number
+                        Credentials = new NetworkCredential("user", "password"), // Hardcoded Credentials
+                        EnableSsl = true,
+                    };
+                    
+                    var mailMessage = new MailMessage
+                    {
+                        From = new MailAddress("noreply@fooddelivery.com"),
+                        Subject = "Welcome!",
+                        Body = "Welcome to our service.",
+                        IsBodyHtml = true,
+                    };
+
+                    mailMessage.To.Add(email);
+
+                    if (type == "VIP")
+                    {
+                        mailMessage.Body += " As a VIP, you get 20% off.";
+                    }
+                    else
+                    {
+                        mailMessage.Body += " Enjoy your stay.";
+                    }
+
+                    // smtpClient.Send(mailMessage); 
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                }
+            }
+        }
+    }
+
+    // Code Smell: God Class - Inventory logic
+    private void CheckInventory(Customer customer)
+    {
+        // Code Smell: Magic Number
+        if (customer.Id > 100000)
+        {
+            // do something
+        }
     }
 }
