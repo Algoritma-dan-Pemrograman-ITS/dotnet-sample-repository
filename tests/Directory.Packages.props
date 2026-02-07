@@ -39,11 +39,13 @@
     <PackageVersion Include="WireMock.NET" Version="1.5.13" />
     <PackageVersion Include="Thinkcode.RabbitMQ.OpenAPI" Version="1.0.8" />
     <PackageVersion Include="EasyNetQ.Management.Client" Version="3.0.0" />
-    <PackageVersion Include="coverlet.msbuild" Version="6.0.2" />
+    <PackageVersion Include="coverlet.collector" Version="6.0.0" />
     <PackageVersion Include="xunit" Version="2.9.0" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
     <PackageVersion Include="AnyOf" Version="0.3.0" />
     <PackageVersion Include="Serilog.Sinks.Xunit" Version="3.0.5" />
     <PackageVersion Include="xunit.analyzers" Version="1.15.0" />
+    <PackageVersion Include="MediatR" Version="12.4.0" />
+    <PackageVersion Include="MockQueryable.NSubstitute" Version="7.0.0" />
   </ItemGroup>
 </Project>

@@ -1,0 +1,48 @@
+name: Test and Coverage
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build
+      run: dotnet build --no-restore
+
+    - name: Test and Collect Coverage
+      run: |
+        dotnet test tests/modules/Catalogs/Catalogs.UnitTests/FoodDelivery.Modules.Catalogs.UnitTests.csproj \
+        --no-build \
+        --collect:"XPlat Code Coverage" \
+        --results-directory TestResults
+
+    - name: Install ReportGenerator
+      run: dotnet tool install -g dotnet-reportgenerator-globaltool
+
+    - name: Generate Coverage Report
+      run: |
+         reportgenerator \
+        -reports:"TestResults/**/coverage.cobertura.xml" \
+        -targetdir:"TestResults/CoverageReport" \
+        -reporttypes:HtmlInline
+
+    - name: Upload Coverage Report
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-report
+        path: TestResults/CoverageReport

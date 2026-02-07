@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>FoodDelivery.Modules.Catalogs.UnitTests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\src\Modules\Catalogs\FoodDelivery.Modules.Catalogs\FoodDelivery.Modules.Catalogs.csproj" />
+    <ProjectReference Include="..\..\..\Common\FoodDelivery.Tests.Common.csproj" />
+  </ItemGroup>
+
+</Project>
