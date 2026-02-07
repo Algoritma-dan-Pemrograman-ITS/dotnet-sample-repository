@@ -1,3 +1,5 @@
 namespace FoodDelivery.Modules.Customers.Customers.Features.CreatingCustomer;
 
-public record CreateCustomerRequest(string Email);
+
+public record CreateCustomerRequest(string Email, string Type = "Regular");
+

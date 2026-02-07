@@ -2,6 +2,7 @@ using Asp.Versioning.Builder;
 using BuildingBlocks.Abstractions.Persistence;
 using BuildingBlocks.Abstractions.Web.Module;
 using FoodDelivery.Modules.Customers.Customers.Data;
+using FoodDelivery.Modules.Customers.Customers.Features.CreatingCustomer;
 
 namespace FoodDelivery.Modules.Customers.Customers;
 
@@ -23,6 +24,8 @@ internal static class CustomersConfigs
         VersionSet = endpoints.NewApiVersionSet(Tag).Build();
 
         // Routes mapped by conventions, with implementing `IMinimalEndpointDefinition` but we can map them here without convention.
+        endpoints.MapCreateCustomerEndpoint();
+
         return endpoints;
     }
 }

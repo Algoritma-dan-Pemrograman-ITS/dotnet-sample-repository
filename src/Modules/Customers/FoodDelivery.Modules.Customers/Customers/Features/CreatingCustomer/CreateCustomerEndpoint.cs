@@ -25,7 +25,7 @@ public class CreateCustomerEndpoint : IMinimalEndpointDefinition
         return builder;
     }
 
-    private static Task<IResult> CreateCustomer(
+    internal static Task<IResult> CreateCustomer(
         CreateCustomerRequest request,
         IGatewayProcessor<CustomersModuleConfiguration> gatewayProcessor,
         CancellationToken cancellationToken)
@@ -34,11 +34,31 @@ public class CreateCustomerEndpoint : IMinimalEndpointDefinition
 
         return gatewayProcessor.ExecuteCommand(async commandProcessor =>
         {
-            var command = new CreateCustomer(request.Email);
+            var command = new CreateCustomer(request.Email, request.Type);
 
             var result = await commandProcessor.SendAsync(command, cancellationToken);
 
             return Results.Created($"{CustomersConfigs.CustomersPrefixUri}/{result.CustomerId}", result);
         });
+    }
+}
+
+internal static class CreateCustomerEndpointExtensions
+{
+    internal static IEndpointRouteBuilder MapCreateCustomerEndpoint(this IEndpointRouteBuilder builder)
+    {
+        builder.MapPost(CustomersConfigs.CustomersPrefixUri, CreateCustomerEndpoint.CreateCustomer)
+            .AllowAnonymous()
+            .Produces<CreateCustomerResponse>(StatusCodes.Status201Created)
+            .Produces(StatusCodes.Status400BadRequest)
+            .WithTags(CustomersConfigs.Tag)
+            .WithMetadata(new SwaggerOperationAttribute("Creating a Customer", "Creating a Customer"))
+            .WithName("CreateCustomer")
+            .WithDisplayName("Register New Customer.")
+            .WithApiVersionSet(CustomersConfigs.VersionSet)
+            .HasApiVersion(1.0)
+            .HasApiVersion(2.0);
+
+        return builder;
     }
 }

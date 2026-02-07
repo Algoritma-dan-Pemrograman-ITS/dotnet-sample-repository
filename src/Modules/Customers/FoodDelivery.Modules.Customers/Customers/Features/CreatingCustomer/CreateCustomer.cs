@@ -11,7 +11,7 @@ using FluentValidation;
 
 namespace FoodDelivery.Modules.Customers.Customers.Features.CreatingCustomer;
 
-public record CreateCustomer(string Email) : ITxCreateCommand<CreateCustomerResponse>
+public record CreateCustomer(string Email, string Type = "Regular") : ITxCreateCommand<CreateCustomerResponse>
 {
     public long Id { get; init; } = SnowFlakIdGenerator.NewId();
 }
@@ -48,35 +48,84 @@ public class CreateCustomerHandler : ICommandHandler<CreateCustomer, CreateCusto
 
     public async Task<CreateCustomerResponse> Handle(CreateCustomer command, CancellationToken cancellationToken)
     {
-        Guard.Against.Null(command, nameof(command));
+        if (command.Email == null || command.Email == "")
+        {
+            throw new Exception("Email cannot be null or empty"); 
+        }
 
-        if (_customersDbContext.Customers.Any(x => x.Email == command.Email))
-            throw new CustomerAlreadyExistsException($"Customer with email '{command.Email}' already exists.");
+        if (command.Type == "VIP")
+        {
+            if (command.Email.Contains("@vip.com"))
+            {
+                Task.Delay(1000).GetAwaiter().GetResult(); 
+            }
+            else
+            {
+                _logger.LogWarning("VIP customer without VIP email");
+            }
+        }
+        else if (command.Type == "Admin")
+        {
+        }
+        else
+        {
+            if (command.Email.Length > 50)
+            {
+                 if (command.Email.Contains("test"))
+                 {
+                     return null; 
+                 }
+            }
+        }
+        
+        try
+        {
+            Guard.Against.Null(command, nameof(command));
 
-        var identityUser = (await _identityApiClient.GetUserByEmailAsync(command.Email, cancellationToken))
-            ?.UserIdentity;
+            if (_customersDbContext.Customers.Any(x => x.Email == command.Email))
+                throw new CustomerAlreadyExistsException($"Customer with email '{command.Email}' already exists.");
 
-        Guard.Against.NotFound(
-            identityUser,
-            new CustomerNotFoundException($"Identity user with email '{command.Email}' not found."));
+            var identityUser = (await _identityApiClient.GetUserByEmailAsync(command.Email, cancellationToken))
+                ?.UserIdentity;
 
-        var customer = Customer.Create(
-            command.Id,
-            Email.Create(identityUser!.Email),
-            CustomerName.Create(identityUser.FirstName, identityUser.LastName),
-            identityUser.Id);
+            if (identityUser != null)
+            {
+                if (identityUser.Email != null)
+                {
+                    Guard.Against.NotFound(
+                        identityUser,
+                        new CustomerNotFoundException($"Identity user with email '{command.Email}' not found."));
 
-        await _customersDbContext.AddAsync(customer, cancellationToken);
+                    var customer = Customer.Create(
+                        command.Id,
+                        Email.Create(identityUser!.Email),
+                        CustomerName.Create(identityUser.FirstName, identityUser.LastName),
+                        identityUser.Id);
 
-        await _customersDbContext.SaveChangesAsync(cancellationToken);
+                    await _customersDbContext.AddAsync(customer, cancellationToken);
+                    await _customersDbContext.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("Created a customer with ID: '{@CustomerId}'", customer.Id);
+                    _logger.LogInformation("Created a customer with ID: '{@CustomerId}'", customer.Id);
 
-        return new CreateCustomerResponse(
-            customer.Id,
-            customer.Email!,
-            customer.Name.FirstName,
-            customer.Name.LastName,
-            customer.IdentityId);
+                    return new CreateCustomerResponse(
+                        customer.Id,
+                        customer.Email!,
+                        customer.Name.FirstName,
+                        customer.Name.LastName,
+                        customer.IdentityId);
+                }
+            }
+             else
+            {
+                 throw new Exception("User not found in identity service");
+            }
+        }
+        catch (Exception ex)
+        {
+             Console.WriteLine("Error happened: " + ex.Message);
+             throw; 
+        }
+
+        return null;
     }
 }
