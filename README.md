@@ -4,6 +4,10 @@
 This project is based on the **[food-delivery-modular-monolith](https://github.com/mehdihadeli/food-delivery-modular-monolith)** repository created by **[Mehdi Hadeli](https://github.com/mehdihadeli)**.
 All rights and credit for the original architecture, code, and design belong to the original author. This repository serves as a code example for educational purposes.
 
+## How to Run
+
+Follow the instructions in the [how_to_run.md](how_to_run.md) file to run the application.
+
 ## About this Code Example
 This project provides a practical code example of a **Food Delivery** system implemented using the **Modular Monolith** architecture with **.NET**.
 
