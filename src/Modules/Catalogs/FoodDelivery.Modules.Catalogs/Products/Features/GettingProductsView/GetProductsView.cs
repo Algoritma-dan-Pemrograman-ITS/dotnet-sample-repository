@@ -1,10 +1,10 @@
 using AutoMapper;
 using BuildingBlocks.Abstractions.CQRS.Query;
-using BuildingBlocks.Abstractions.Persistence;
-using Dapper;
 using FoodDelivery.Modules.Catalogs.Products.Models;
+using FoodDelivery.Modules.Catalogs.Shared.Contracts;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace FoodDelivery.Modules.Catalogs.Products.Features.GettingProductsView;
 
@@ -28,30 +28,37 @@ public class GetProductsViewValidator : AbstractValidator<GetProductsView>
     }
 }
 
-internal class GetProductsViewQueryHandler : IRequestHandler<GetProductsView, GetProductsViewResponse>
+internal class GetProductsViewQueryHandler : IQueryHandler<GetProductsView, GetProductsViewResponse>
 {
-    private readonly IDbFacadeResolver _facadeResolver;
+    private readonly ICatalogDbContext _catalogDbContext;
     private readonly IMapper _mapper;
+    private readonly ILogger<GetProductsViewQueryHandler> _logger;
 
-    public GetProductsViewQueryHandler(IDbFacadeResolver facadeResolver, IMapper mapper)
+    public GetProductsViewQueryHandler(
+        ICatalogDbContext catalogDbContext, 
+        IMapper mapper,
+        ILogger<GetProductsViewQueryHandler> logger)
     {
-        _facadeResolver = facadeResolver;
+        _catalogDbContext = catalogDbContext;
         _mapper = mapper;
+        _logger = logger;
     }
 
     public async Task<GetProductsViewResponse> Handle(
         GetProductsView request,
         CancellationToken cancellationToken)
     {
-        await using var conn = _facadeResolver.Database.GetDbConnection();
-        await conn.OpenAsync(cancellationToken);
-        var results = await conn.QueryAsync<ProductView>(
-            @"SELECT product_id ""Id"", product_name ""Name"", category_name CategoryName, supplier_name SupplierName, count(*) OVER() AS ItemCount
-                    FROM catalog.product_views LIMIT @PageSize OFFSET ((@Page - 1) * @PageSize)",
-            new { request.PageSize, request.Page }
-        );
+        var results = await _catalogDbContext.ProductsView
+            .OrderBy(x => x.ProductName)
+            .Skip((request.Page - 1) * request.PageSize)
+            .Take(request.PageSize)
+            .ToListAsync(cancellationToken);
 
-        var productViewDtos = _mapper.Map<IEnumerable<ProductViewDto>>(results);
+        var productViewDtos = results.Select(x => new ProductViewDto(
+            x.ProductId,
+            x.ProductName,
+            x.CategoryName,
+            x.SupplierName)).ToList();
 
         return new GetProductsViewResponse(productViewDtos);
     }

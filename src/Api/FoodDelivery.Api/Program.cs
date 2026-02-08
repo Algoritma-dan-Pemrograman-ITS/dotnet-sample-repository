@@ -92,7 +92,17 @@ static void RegisterServices(WebApplicationBuilder builder)
     builder.Services.AddControllers(options =>
             options.Conventions.Add(new RouteTokenTransformerConvention(new SlugifyParameterTransformer())))
         .AddNewtonsoftJson(options =>
-            options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore);
+        {
+            options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
+            options.SerializerSettings.Converters.Add(new BuildingBlocks.Core.Serialization.LongToStringConverter());
+        });
+
+    // https://learn.microsoft.com/en-us/aspnet/core/fundamentals/minimal-apis/responses?view=aspnetcore-7.0#configure-json-serialization-options-on-the-server
+    builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =>
+    {
+        // Use WriteAsString to handle long/ulong precision loss in JS
+        options.SerializerOptions.NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.WriteAsString;
+    });
 
     builder.Services.ReplaceTransient<IControllerActivator, CustomServiceBasedControllerActivator>();
 
