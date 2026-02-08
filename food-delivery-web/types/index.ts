@@ -4,7 +4,6 @@ export interface User {
     firstName: string;
     lastName: string;
     username: string;
-    roles: string[];
 }
 
 export interface AuthResponse {
@@ -59,54 +58,4 @@ export interface Product {
 
 export interface GetProductsResponse {
     products: ProductSummary[];
-}
-
-// ── Paginated wrapper returned by list endpoints ──
-export interface PaginatedResponse<T> {
-    items: T[];
-    pageNumber: number;
-    pageSize: number;
-    totalCount: number;
-}
-
-// ── Customers ──
-export interface Customer {
-    id: string;
-    identityId: string;
-    email: string;
-    name: string;
-    createdAt: string;
-}
-
-export interface GetCustomersResponse {
-    customers: Customer[] | PaginatedResponse<Customer>;
-}
-
-// ── Restock Subscriptions ──
-export interface RestockSubscription {
-    id: string;
-    customerId: string;
-    email: string;
-    productName: string;
-    processed: boolean;
-    createdAt: string;
-}
-
-export interface GetRestockSubscriptionsResponse {
-    restockSubscriptions: RestockSubscription[] | PaginatedResponse<RestockSubscription>;
-}
-
-// ── Identity / Users ──
-export interface IdentityUser {
-    id: string;
-    userName: string;
-    email: string;
-    firstName: string;
-    lastName: string;
-    userState: string | number;
-    createdAt: string;
-}
-
-export interface GetUsersResponse {
-    identityUsers: PaginatedResponse<IdentityUser>;
 }

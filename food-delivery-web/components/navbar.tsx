@@ -5,7 +5,7 @@ import { useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
 
 export function Navbar() {
-    const { user, logout, isAuthenticated, isAdmin } = useAuth();
+    const { user, logout, isAuthenticated } = useAuth();
 
     return (
         <header className="bg-white shadow-sm sticky top-0 z-50">
@@ -22,34 +22,6 @@ export function Navbar() {
                             >
                                 Menu
                             </Link>
-                            {isAdmin && (
-                                <>
-                                    <Link
-                                        href="/admin/dashboard"
-                                        className="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-blue-600 hover:border-blue-300 hover:text-blue-800"
-                                    >
-                                        Dashboard
-                                    </Link>
-                                    <Link
-                                        href="/admin/products"
-                                        className="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-blue-600 hover:border-blue-300 hover:text-blue-800"
-                                    >
-                                        Products
-                                    </Link>
-                                    <Link
-                                        href="/admin/users"
-                                        className="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-blue-600 hover:border-blue-300 hover:text-blue-800"
-                                    >
-                                        Users
-                                    </Link>
-                                    <Link
-                                        href="/admin/customers"
-                                        className="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-blue-600 hover:border-blue-300 hover:text-blue-800"
-                                    >
-                                        Customers
-                                    </Link>
-                                </>
-                            )}
                         </div>
                     </div>
                     <div className="flex items-center gap-4">
@@ -57,9 +29,6 @@ export function Navbar() {
                             <>
                                 <span className="text-sm text-gray-700 hidden sm:block">
                                     Hello, {user?.firstName}
-                                    {isAdmin && (
-                                        <span className="ml-1 text-xs text-blue-600 font-semibold">(Admin)</span>
-                                    )}
                                 </span>
                                 <Button variant="outline" size="sm" onClick={logout}>
                                     Logout
