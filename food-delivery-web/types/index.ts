@@ -24,6 +24,8 @@ export interface ApiError {
 export interface ProductSummary {
     id: string;
     name: string;
+    description?: string;
+    price?: number;
     categoryName: string;
     supplierName: string;
     itemCount: number;
@@ -104,6 +106,7 @@ export interface IdentityUser {
     firstName: string;
     lastName: string;
     userState: string | number;
+    roles?: string[];
     createdAt: string;
 }
 

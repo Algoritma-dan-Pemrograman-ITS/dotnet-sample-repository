@@ -23,32 +23,12 @@ export function Navbar() {
                                 Menu
                             </Link>
                             {isAdmin && (
-                                <>
-                                    <Link
-                                        href="/admin/dashboard"
-                                        className="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-blue-600 hover:border-blue-300 hover:text-blue-800"
-                                    >
-                                        Dashboard
-                                    </Link>
-                                    <Link
-                                        href="/admin/products"
-                                        className="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-blue-600 hover:border-blue-300 hover:text-blue-800"
-                                    >
-                                        Products
-                                    </Link>
-                                    <Link
-                                        href="/admin/users"
-                                        className="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-blue-600 hover:border-blue-300 hover:text-blue-800"
-                                    >
-                                        Users
-                                    </Link>
-                                    <Link
-                                        href="/admin/customers"
-                                        className="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-blue-600 hover:border-blue-300 hover:text-blue-800"
-                                    >
-                                        Customers
-                                    </Link>
-                                </>
+                                <Link
+                                    href="/admin/dashboard"
+                                    className="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-blue-600 hover:border-blue-300 hover:text-blue-800"
+                                >
+                                    Dashboard
+                                </Link>
                             )}
                         </div>
                     </div>

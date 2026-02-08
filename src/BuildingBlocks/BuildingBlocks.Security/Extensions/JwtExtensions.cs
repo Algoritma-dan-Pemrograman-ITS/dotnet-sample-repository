@@ -64,7 +64,9 @@ public static class Extensions
                     ValidAudience = jwtOptions.Audience,
                     SaveSigninToken = true,
                     ClockSkew = TimeSpan.Zero,
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SecretKey))
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SecretKey)),
+                    RoleClaimType = System.Security.Claims.ClaimTypes.Role,
+                    NameClaimType = JwtRegisteredClaimNames.Name,
                 };
 
                 options.Events = new JwtBearerEvents

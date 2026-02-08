@@ -106,10 +106,36 @@ function ProductsContent() {
         setLoading(true);
         setError('');
         try {
-            const response = await api.get<GetProductsResponse>(
-                `/api/v1/catalogs/products-view/${page}/${pageSize}`
+            // Using the full products endpoint that contains Price, Description, and Stock
+            const response = await api.get<{
+                products: {
+                    items: any[];
+                    totalItems: number;
+                    page: number;
+                    pageSize: number;
+                }
+            }>(
+                `/api/v1/catalogs/products`, {
+                params: {
+                    page: page,
+                    pageSize: pageSize
+                }
+            }
             );
-            setProducts(response.data.products || []);
+
+            // Mapping the list result to our local state
+            // ProductDto uses 'availableStock' instead of 'itemCount'
+            const mappedProducts = (response.data.products.items || []).map(p => ({
+                id: p.id.toString(),
+                name: p.name,
+                description: p.description,
+                price: Number(p.price || 0),
+                itemCount: Number(p.availableStock || 0),
+                categoryName: p.categoryName,
+                supplierName: p.supplierName
+            }));
+
+            setProducts(mappedProducts);
         } catch (err) {
             console.error('Failed to fetch products', err);
             setError('Failed to load products.');
@@ -184,18 +210,18 @@ function ProductsContent() {
                     name: formData.name,
                     price: Number(formData.price),
                     stock: Number(formData.stock),
-                    restockThreshold: Number(formData.restockThreshold),
-                    maxStockThreshold: Number(formData.maxStockThreshold),
-                    productType: formData.productType,
-                    height: Number(formData.height),
-                    width: Number(formData.width),
-                    depth: Number(formData.depth),
-                    size: formData.size,
-                    productColor: formData.productColor,
-                    categoryId: Number(formData.categoryId),
-                    supplierId: Number(formData.supplierId),
-                    brandId: Number(formData.brandId),
+                    restockThreshold: 10,
+                    maxStockThreshold: 1000,
                     description: formData.description || null,
+                    categoryId: 1,
+                    supplierId: 1,
+                    brandId: 1,
+                    status: 1, // ProductStatus.Available
+                    color: 1, // ProductColor.Black
+                    height: 1,
+                    width: 1,
+                    depth: 1,
+                    size: "Standard"
                 });
                 setFormMessage('Product created successfully!');
             } else {
@@ -230,134 +256,183 @@ function ProductsContent() {
     };
 
     return (
-        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between mb-6">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Manage Products</h1>
-                    <p className="text-sm text-gray-500 mt-1">
-                        View product catalog, manage stock levels, create and edit products.
-                    </p>
+        <div className="min-h-screen bg-gradient-to-br from-purple-700 via-purple-600 to-indigo-800 text-white relative overflow-hidden">
+            {/* Decorative shapes from homepage */}
+            <div className="absolute top-0 right-0 -mt-20 -mr-20 w-96 h-96 bg-yellow-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+            <div className="absolute bottom-0 left-0 -mb-20 -ml-20 w-96 h-96 bg-pink-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+
+            <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 relative z-10">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-12 gap-6">
+                    <div>
+                        <div className="inline-block rounded-full bg-white/10 px-3 py-1 text-sm font-medium backdrop-blur-sm border border-white/20 text-yellow-300 mb-4">
+                            Inventory Management
+                        </div>
+                        <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl">
+                            Stock <span className="text-yellow-400">Control</span>
+                        </h1>
+                        <p className="mt-2 text-lg text-purple-100 max-w-2xl">
+                            Quickly replenish or debit stock levels for your product catalog.
+                        </p>
+                    </div>
+                    <div className="flex gap-4">
+                        <Button
+                            onClick={openCreateModal}
+                            className="bg-yellow-400 text-purple-900 hover:bg-yellow-300 font-bold rounded-full px-8 shadow-lg shadow-yellow-400/20"
+                        >
+                            + New Product
+                        </Button>
+                        <Link href="/admin/dashboard">
+                            <Button variant="outline" size="lg" className="border-white/20 text-white bg-white/10 hover:bg-white/20 hover:text-white rounded-full backdrop-blur-sm">
+                                &larr; Back to Dashboard
+                            </Button>
+                        </Link>
+                    </div>
                 </div>
-                <div className="flex gap-3">
-                    <Button onClick={openCreateModal}>+ New Product</Button>
-                    <Link href="/admin/dashboard">
-                        <Button variant="outline" size="sm">&larr; Dashboard</Button>
-                    </Link>
-                </div>
+
+                {error && (
+                    <div className="rounded-2xl bg-red-500/20 border border-red-500/30 p-4 mb-8 text-sm text-red-100 backdrop-blur-md">
+                        {error}
+                    </div>
+                )}
+
+                {loading ? (
+                    <div className="space-y-4">
+                        {[...Array(5)].map((_, i) => (
+                            <div key={i} className="animate-pulse bg-white/10 h-16 rounded-3xl border border-white/20 backdrop-blur-md" />
+                        ))}
+                    </div>
+                ) : (
+                    <div className="space-y-8">
+                        <div className="overflow-hidden bg-white/10 border border-white/20 backdrop-blur-md rounded-3xl shadow-2xl">
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-white/10">
+                                    <thead className="bg-white/5">
+                                        <tr>
+                                            <th className="px-8 py-5 text-left text-xs font-bold text-yellow-400 uppercase tracking-wider">Name</th>
+                                            <th className="px-8 py-5 text-left text-xs font-bold text-yellow-400 uppercase tracking-wider">Description</th>
+                                            <th className="px-8 py-5 text-left text-xs font-bold text-yellow-400 uppercase tracking-wider">Price</th>
+                                            <th className="px-8 py-5 text-left text-xs font-bold text-yellow-400 uppercase tracking-wider">Stock</th>
+                                            <th className="px-8 py-5 text-right text-xs font-bold text-yellow-400 uppercase tracking-wider">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-white/5">
+                                        {products.map((p) => (
+                                            <tr key={p.id} className="hover:bg-white/5 transition-colors duration-200">
+                                                <td className="px-8 py-5 text-sm font-bold whitespace-nowrap">
+                                                    <Link href={`/products/${p.id}`} className="text-white hover:text-yellow-400 transition-colors">
+                                                        {p.name}
+                                                    </Link>
+                                                </td>
+                                                <td className="px-8 py-5 text-sm text-purple-100 max-w-xs truncate">
+                                                    {p.description || "—"}
+                                                </td>
+                                                <td className="px-8 py-5 text-sm text-white font-bold whitespace-nowrap">
+                                                    ${p.price?.toFixed(2)}
+                                                </td>
+                                                <td className="px-8 py-5 text-sm text-yellow-400 whitespace-nowrap font-mono font-bold">
+                                                    {p.itemCount}
+                                                </td>
+                                                <td className="px-8 py-5 text-right whitespace-nowrap space-x-2">
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        className="border-green-400/30 text-green-300 bg-green-400/10 hover:bg-green-400/20 rounded-full"
+                                                        onClick={() => {
+                                                            setStockModal({ open: true, type: 'replenish', productId: p.id, productName: p.name });
+                                                            setStockMessage('');
+                                                            setStockQuantity('');
+                                                        }}
+                                                    >
+                                                        + Replenish
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        className="border-red-400/30 text-red-300 bg-red-400/10 hover:bg-red-400/20 rounded-full"
+                                                        onClick={() => {
+                                                            setStockModal({ open: true, type: 'debit', productId: p.id, productName: p.name });
+                                                            setStockMessage('');
+                                                            setStockQuantity('');
+                                                        }}
+                                                    >
+                                                        − Debit
+                                                    </Button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {products.length === 0 && (
+                                            <tr>
+                                                <td colSpan={5} className="px-8 py-16 text-center text-purple-200 font-medium italic">No products found.</td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-center items-center gap-6">
+                            <Button
+                                variant="outline"
+                                className="border-white/20 text-white bg-white/10 hover:bg-white/20 hover:text-white rounded-full backdrop-blur-sm min-w-[120px]"
+                                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                                disabled={page === 1}
+                            >
+                                Previous
+                            </Button>
+                            <span className="text-sm font-bold bg-white/10 px-4 py-2 rounded-full border border-white/20 backdrop-blur-sm">
+                                Page <span className="text-yellow-400">{page}</span>
+                            </span>
+                            <Button
+                                variant="outline"
+                                className="border-white/20 text-white bg-white/10 hover:bg-white/20 hover:text-white rounded-full backdrop-blur-sm min-w-[120px]"
+                                onClick={() => setPage((p) => p + 1)}
+                                disabled={products.length < pageSize}
+                            >
+                                Next
+                            </Button>
+                        </div>
+                    </div>
+                )}
             </div>
-
-            {error && (
-                <div className="rounded-md bg-red-50 p-4 mb-6 text-sm text-red-700">{error}</div>
-            )}
-
-            {loading ? (
-                <div className="space-y-3">
-                    {[...Array(5)].map((_, i) => (
-                        <div key={i} className="animate-pulse bg-white h-16 rounded-lg border" />
-                    ))}
-                </div>
-            ) : (
-                <>
-                    <div className="overflow-hidden bg-white shadow ring-1 ring-black ring-opacity-5 rounded-lg">
-                        <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50">
-                                <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Supplier</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Items</th>
-                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-200">
-                                {products.map((p) => (
-                                    <tr key={p.id} className="hover:bg-gray-50">
-                                        <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                                            <Link href={`/products/${p.id}`} className="text-blue-600 hover:underline">
-                                                {p.name}
-                                            </Link>
-                                        </td>
-                                        <td className="px-6 py-4 text-sm text-gray-500">{p.categoryName}</td>
-                                        <td className="px-6 py-4 text-sm text-gray-500">{p.supplierName}</td>
-                                        <td className="px-6 py-4 text-sm text-gray-500">{p.itemCount}</td>
-                                        <td className="px-6 py-4 text-right space-x-2">
-                                            <Button size="sm" variant="outline" onClick={() => openEditModal(p.id)}>
-                                                Edit
-                                            </Button>
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                onClick={() => {
-                                                    setStockModal({ open: true, type: 'replenish', productId: p.id, productName: p.name });
-                                                    setStockMessage('');
-                                                    setStockQuantity('');
-                                                }}
-                                            >
-                                                + Replenish
-                                            </Button>
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                onClick={() => {
-                                                    setStockModal({ open: true, type: 'debit', productId: p.id, productName: p.name });
-                                                    setStockMessage('');
-                                                    setStockQuantity('');
-                                                }}
-                                            >
-                                                − Debit
-                                            </Button>
-                                        </td>
-                                    </tr>
-                                ))}
-                                {products.length === 0 && (
-                                    <tr>
-                                        <td colSpan={5} className="px-6 py-8 text-center text-gray-400">No products found.</td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div className="mt-6 flex justify-center gap-4">
-                        <Button variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
-                            Previous
-                        </Button>
-                        <span className="flex items-center text-sm text-gray-600">Page {page}</span>
-                        <Button variant="outline" onClick={() => setPage((p) => p + 1)} disabled={products.length < pageSize}>
-                            Next
-                        </Button>
-                    </div>
-                </>
-            )}
 
             {/* Stock Modal */}
             {stockModal?.open && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-                    <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-1">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-purple-950/60 backdrop-blur-md">
+                    <div className="bg-gradient-to-br from-purple-900 to-indigo-950 rounded-3xl border border-white/20 shadow-2xl p-8 w-full max-w-md relative overflow-hidden text-white">
+                        <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-yellow-400 rounded-full mix-blend-multiply filter blur-3xl opacity-10"></div>
+
+                        <h2 className="text-2xl font-extrabold text-white mb-2">
                             {stockModal.type === 'replenish' ? 'Replenish Stock' : 'Debit Stock'}
                         </h2>
-                        <p className="text-sm text-gray-500 mb-4">{stockModal.productName}</p>
+                        <p className="text-purple-200 font-medium mb-6">Product: <span className="text-yellow-400">{stockModal.productName}</span></p>
 
-                        <div className="space-y-4">
-                            <Input
-                                type="number"
-                                min={1}
-                                placeholder="Quantity"
-                                value={stockQuantity}
-                                onChange={(e) => setStockQuantity(e.target.value)}
-                            />
+                        <div className="space-y-6">
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-purple-200 ml-1">Quantity</label>
+                                <Input
+                                    type="number"
+                                    min={1}
+                                    placeholder="Enter quantity..."
+                                    value={stockQuantity}
+                                    onChange={(e) => setStockQuantity(e.target.value)}
+                                    className="h-12 rounded-2xl border-white/20 bg-white/10 text-white focus:ring-yellow-400/50 backdrop-blur-sm placeholder:text-purple-300/50"
+                                />
+                            </div>
 
                             {stockMessage && (
-                                <p className={`text-sm ${stockMessage.startsWith('Success') ? 'text-green-600' : 'text-red-600'}`}>
+                                <p className={`text-sm font-bold text-center p-3 rounded-2xl ${stockMessage.startsWith('Success') ? 'bg-green-500/20 text-green-300 border border-green-500/30' : 'bg-red-500/20 text-red-300 border border-red-500/30'}`}>
                                     {stockMessage}
                                 </p>
                             )}
 
-                            <div className="flex justify-end gap-3">
-                                <Button variant="outline" onClick={() => setStockModal(null)}>Cancel</Button>
-                                <Button onClick={handleStockAction} disabled={stockLoading || !stockQuantity}>
-                                    {stockLoading ? 'Processing...' : stockModal.type === 'replenish' ? 'Replenish' : 'Debit'}
+                            <div className="flex justify-end gap-4 pt-4">
+                                <Button variant="ghost" className="text-purple-100 hover:bg-white/10 rounded-full" onClick={() => setStockModal(null)}>Cancel</Button>
+                                <Button
+                                    className="bg-yellow-400 text-purple-900 hover:bg-yellow-300 font-bold rounded-full px-8 shadow-lg shadow-yellow-400/20"
+                                    onClick={handleStockAction}
+                                    disabled={stockLoading || !stockQuantity}
+                                >
+                                    {stockLoading ? 'Processing...' : stockModal.type === 'replenish' ? 'Confirm Replenish' : 'Confirm Debit'}
                                 </Button>
                             </div>
                         </div>
@@ -365,134 +440,64 @@ function ProductsContent() {
                 </div>
             )}
 
-            {/* Create / Edit Product Modal */}
+            {/* Simplified Create Product Modal */}
             {formModal?.open && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 overflow-y-auto py-10">
-                    <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                            {formModal.mode === 'create' ? 'Create Product' : 'Edit Product'}
-                        </h2>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-purple-950/60 backdrop-blur-md overflow-y-auto py-10">
+                    <div className="bg-gradient-to-br from-purple-900 to-indigo-950 rounded-[2.5rem] border border-white/20 shadow-2xl p-10 w-full max-w-xl relative overflow-hidden text-white">
+                        <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-yellow-400 rounded-full mix-blend-multiply filter blur-3xl opacity-10"></div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="col-span-2">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
-                                <Input value={formData.name} onChange={(e) => updateField('name', e.target.value)} placeholder="Product name" />
+                        <h2 className="text-3xl font-extrabold text-white mb-2">New <span className="text-yellow-400">Product</span></h2>
+                        <p className="text-purple-200 font-medium mb-8">Quickly add a new item to your stock control.</p>
+
+                        <div className="space-y-6 relative z-10">
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-purple-200 ml-1">Name *</label>
+                                <Input
+                                    value={formData.name}
+                                    onChange={(e) => updateField('name', e.target.value)}
+                                    placeholder="Product name..."
+                                    className="h-12 rounded-2xl border-white/20 bg-white/10 text-white focus:ring-yellow-400/50 backdrop-blur-sm placeholder:text-purple-300/50"
+                                />
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Price *</label>
-                                <Input type="number" min={0} step="0.01" value={formData.price} onChange={(e) => updateField('price', e.target.value)} placeholder="0.00" />
-                            </div>
-
-                            {formModal.mode === 'create' && (
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Initial Stock *</label>
-                                    <Input type="number" min={0} value={formData.stock} onChange={(e) => updateField('stock', e.target.value)} />
+                            <div className="grid grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-bold text-purple-200 ml-1">Price *</label>
+                                    <Input type="number" min={0} step="0.01" value={formData.price} onChange={(e) => updateField('price', e.target.value)} placeholder="0.00" className="h-12 rounded-2xl border-white/20 bg-white/10 text-white focus:ring-yellow-400/50 backdrop-blur-sm" />
                                 </div>
-                            )}
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Restock Threshold</label>
-                                <Input type="number" min={0} value={formData.restockThreshold} onChange={(e) => updateField('restockThreshold', e.target.value)} />
+                                <div className="space-y-2">
+                                    <label className="text-sm font-bold text-purple-200 ml-1">Initial Stock *</label>
+                                    <Input type="number" min={0} value={formData.stock} onChange={(e) => updateField('stock', e.target.value)} className="h-12 rounded-2xl border-white/20 bg-white/10 text-white focus:ring-yellow-400/50 backdrop-blur-sm" />
+                                </div>
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Max Stock Threshold</label>
-                                <Input type="number" min={0} value={formData.maxStockThreshold} onChange={(e) => updateField('maxStockThreshold', e.target.value)} />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
-                                <select
-                                    value={formData.categoryId}
-                                    onChange={(e) => updateField('categoryId', e.target.value)}
-                                    className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
-                                >
-                                    {CATEGORIES.map((c) => (
-                                        <option key={c.id} value={c.id}>{c.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Supplier ID *</label>
-                                <Input type="number" min={1} max={5} value={formData.supplierId} onChange={(e) => updateField('supplierId', e.target.value)} placeholder="1-5" />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Brand ID *</label>
-                                <Input type="number" min={1} max={5} value={formData.brandId} onChange={(e) => updateField('brandId', e.target.value)} placeholder="1-5" />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Product Type *</label>
-                                <select
-                                    value={formData.productType}
-                                    onChange={(e) => updateField('productType', Number(e.target.value))}
-                                    className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
-                                >
-                                    {PRODUCT_TYPES.map((t) => (
-                                        <option key={t.value} value={t.value}>{t.label}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Color</label>
-                                <select
-                                    value={formData.productColor}
-                                    onChange={(e) => updateField('productColor', Number(e.target.value))}
-                                    className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
-                                >
-                                    {PRODUCT_COLORS.map((c) => (
-                                        <option key={c.value} value={c.value}>{c.label}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Size</label>
-                                <Input value={formData.size} onChange={(e) => updateField('size', e.target.value)} placeholder="e.g. Medium" />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Height</label>
-                                <Input type="number" min={0} value={formData.height} onChange={(e) => updateField('height', e.target.value)} />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Width</label>
-                                <Input type="number" min={0} value={formData.width} onChange={(e) => updateField('width', e.target.value)} />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Depth</label>
-                                <Input type="number" min={0} value={formData.depth} onChange={(e) => updateField('depth', e.target.value)} />
-                            </div>
-
-                            <div className="col-span-2">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-purple-200 ml-1">Description</label>
                                 <textarea
                                     value={formData.description}
                                     onChange={(e) => updateField('description', e.target.value)}
                                     rows={3}
-                                    placeholder="Optional description"
-                                    className="flex w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
+                                    placeholder="Optional product description..."
+                                    className="flex w-full rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-yellow-400/50 backdrop-blur-sm placeholder:text-purple-300/50"
                                 />
                             </div>
-                        </div>
 
-                        {formMessage && (
-                            <p className={`mt-4 text-sm ${formMessage.includes('success') ? 'text-green-600' : 'text-red-600'}`}>
-                                {formMessage}
-                            </p>
-                        )}
+                            {formMessage && (
+                                <div className={`p-4 rounded-2xl text-sm font-bold text-center border ${formMessage.includes('success') ? 'bg-green-500/20 text-green-300 border-green-500/30' : 'bg-red-500/20 text-red-300 border-red-500/30'}`}>
+                                    {formMessage}
+                                </div>
+                            )}
 
-                        <div className="flex justify-end gap-3 mt-6">
-                            <Button variant="outline" onClick={() => setFormModal(null)}>Cancel</Button>
-                            <Button onClick={handleFormSubmit} disabled={formLoading || !formData.name || !formData.price}>
-                                {formLoading ? 'Saving...' : formModal.mode === 'create' ? 'Create' : 'Update'}
-                            </Button>
+                            <div className="flex justify-end gap-4 pt-4">
+                                <Button variant="ghost" className="text-purple-100 hover:bg-white/10 rounded-full" onClick={() => setFormModal(null)}>Cancel</Button>
+                                <Button
+                                    className="bg-yellow-400 text-purple-900 hover:bg-yellow-300 font-extrabold rounded-full px-12 h-14 shadow-xl shadow-yellow-400/20 text-lg"
+                                    onClick={handleFormSubmit}
+                                    disabled={formLoading || !formData.name || !formData.price}
+                                >
+                                    {formLoading ? 'Creating...' : 'Create Product'}
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -33,7 +33,7 @@ public class JwtService : IJwtService
         if (string.IsNullOrWhiteSpace(userName))
             throw new ArgumentException("User ID claim (subject) cannot be empty.", nameof(userName));
 
-        var now = DateTime.Now;
+        var now = DateTime.UtcNow;
         var ipAddress = IpUtilities.GetIpAddress();
 
         // https://leastprivilege.com/2017/11/15/missing-claims-in-the-asp-net-core-2-openid-connect-handler/
@@ -57,10 +57,6 @@ public class JwtService : IJwtService
             new(JwtRegisteredClaimNames.UniqueName, userName),
             new(JwtRegisteredClaimNames.Email, email),
             new(JwtRegisteredClaimNames.GivenName, fullName ?? ""),
-            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            new(JwtRegisteredClaimNames.Iat,
-                new DateTimeOffset(now).ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture),
-                ClaimValueTypes.Integer64),
             new(CustomClaimTypes.RefreshToken, safeRefreshToken),
             new(CustomClaimTypes.IpAddress, ipAddress),
         };
