@@ -34,7 +34,6 @@ public static class Extensions
         // https://docs.microsoft.com/en-us/aspnet/core/security/authentication
         services.AddAuthentication(options =>
             {
-                // will choose bellow JwtBearer handler for handling authentication because of our default schema to `JwtBearerDefaults.AuthenticationScheme` we could another schemas with their handlers
                 options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                 options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -50,6 +49,10 @@ public static class Extensions
                 options.RefreshOnIssuerKeyNotFound = false;
                 options.RequireHttpsMetadata = false;
                 options.IncludeErrorDetails = true;
+
+                // .NET 8 uses JsonWebTokenHandler by default; force legacy handler for compatibility
+                options.UseSecurityTokenValidators = true;
+                options.MapInboundClaims = false;
 
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
@@ -70,14 +73,10 @@ public static class Extensions
                     {
                         if (context.Exception is SecurityTokenExpiredException)
                         {
-                            throw new IdentityException(
-                                "The Token is expired.",
-                                statusCode: HttpStatusCode.Unauthorized);
+                            context.Response.Headers.Add("Token-Expired", "true");
                         }
 
-                        throw new IdentityException(
-                            context.Exception.Message,
-                            statusCode: HttpStatusCode.InternalServerError);
+                        return Task.CompletedTask;
                     },
                     OnChallenge = context =>
                     {

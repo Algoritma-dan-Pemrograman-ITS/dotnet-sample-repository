@@ -39,6 +39,15 @@ public class JwtService : IJwtService
         // https://leastprivilege.com/2017/11/15/missing-claims-in-the-asp-net-core-2-openid-connect-handler/
         // https://github.com/AzureAD/azure-activedirectory-identitymodel-extensions-for-dotnet/blob/a301921ff5904b2fe084c38e41c969f4b2166bcb/src/System.IdentityModel.Tokens.Jwt/ClaimTypeMapping.cs#L45-L125
         // https://stackoverflow.com/a/50012477/581476
+        // Use Base64Url encoding for the refresh token to avoid special chars (+, /, =)
+        // that break System.IdentityModel.Tokens.Jwt v7.x token parsing (IDX12723).
+        var safeRefreshToken = string.IsNullOrEmpty(refreshToken)
+            ? ""
+            : Convert.ToBase64String(Encoding.UTF8.GetBytes(refreshToken))
+                .TrimEnd('=')
+                .Replace('+', '-')
+                .Replace('/', '_');
+
         var jwtClaims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.NameId, userId),
@@ -50,8 +59,9 @@ public class JwtService : IJwtService
             new(JwtRegisteredClaimNames.GivenName, fullName ?? ""),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new(JwtRegisteredClaimNames.Iat,
-                DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture)),
-            new(CustomClaimTypes.RefreshToken, refreshToken ?? ""),
+                new DateTimeOffset(now).ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture),
+                ClaimValueTypes.Integer64),
+            new(CustomClaimTypes.RefreshToken, safeRefreshToken),
             new(CustomClaimTypes.IpAddress, ipAddress),
         };
 
