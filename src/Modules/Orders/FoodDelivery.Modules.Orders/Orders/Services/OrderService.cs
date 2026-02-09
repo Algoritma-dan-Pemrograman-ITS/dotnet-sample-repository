@@ -1,4 +1,5 @@
 using FoodDelivery.Modules.Orders.Orders.Models;
+using FoodDelivery.Modules.Orders.Orders.ValueObjects;
 using FoodDelivery.Modules.Orders.Shared.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;

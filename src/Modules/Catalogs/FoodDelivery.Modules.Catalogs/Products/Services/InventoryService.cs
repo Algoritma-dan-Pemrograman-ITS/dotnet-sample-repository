@@ -1,4 +1,5 @@
 using FoodDelivery.Modules.Catalogs.Products.Models;
+using FoodDelivery.Modules.Catalogs.Products.ValueObjects;
 using FoodDelivery.Modules.Catalogs.Shared.Contracts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -70,7 +71,7 @@ public class InventoryService : IInventoryService
         }
         
         // Check if we have enough stock
-        if (product.AvailableStock >= quantity)
+        if (product.Stock.Available >= quantity)
         {
             _logger.LogInformation(
                 "Reserving {Quantity} units of product {ProductId}", 
@@ -81,7 +82,7 @@ public class InventoryService : IInventoryService
             await Task.Delay(10, cancellationToken);
             
             // Deduct from available stock
-            product.AvailableStock -= quantity;
+            product.Stock = Stock.Create(product.Stock.Available - quantity, product.Stock.RestockThreshold, product.Stock.MaxStockThreshold);
             
             // Update cache
             UpdateReservationCache(productId, quantity);
@@ -91,7 +92,7 @@ public class InventoryService : IInventoryService
             _logger.LogInformation(
                 "Reserved {Quantity} units. New stock level: {Stock}", 
                 quantity, 
-                product.AvailableStock);
+                product.Stock.Available);
             
             return true;
         }
@@ -100,7 +101,7 @@ public class InventoryService : IInventoryService
             "Insufficient stock for product {ProductId}. Requested: {Requested}, Available: {Available}",
             productId,
             quantity,
-            product.AvailableStock);
+            product.Stock.Available);
         
         return false;
     }
@@ -123,7 +124,7 @@ public class InventoryService : IInventoryService
         }
         
         // Add back to available stock
-        product.AvailableStock += quantity;
+        product.Stock = Stock.Create(product.Stock.Available + quantity, product.Stock.RestockThreshold, product.Stock.MaxStockThreshold);
         
         // Update cache
         UpdateReservationCache(productId, -quantity);
@@ -134,7 +135,7 @@ public class InventoryService : IInventoryService
             "Released {Quantity} units of product {ProductId}. New stock: {Stock}",
             quantity,
             productId,
-            product.AvailableStock);
+            product.Stock.Available);
         
         return true;
     }
@@ -150,7 +151,7 @@ public class InventoryService : IInventoryService
             .AsNoTracking()
             .FirstOrDefaultAsync(p => p.Id == productId, cancellationToken);
         
-        return product?.AvailableStock ?? 0;
+        return product?.Stock.Available ?? 0;
     }
     
     /// <summary>
@@ -173,7 +174,7 @@ public class InventoryService : IInventoryService
         // Note: This query might timeout for very large datasets
         var reservations = await _catalogDbContext.Products
             .Where(p => p.Id == productId)
-            .Select(p => p.MaxStockThreshold - p.AvailableStock)
+            .Select(p => p.Stock.MaxStockThreshold - p.Stock.Available)
             .ToListAsync(cancellationToken);
         
         int total = 0;
